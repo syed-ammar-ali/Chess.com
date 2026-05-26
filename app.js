@@ -12,7 +12,7 @@ const chess = new Chess(); // Creates a new chess game instance
 const players = { white: null, black: null }; // Tracks the connected players (White and Black)
 
 app.set("view engine", "ejs");
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "Public")));
 
 app.get("/", (req, res) => {
   res.render("index");
