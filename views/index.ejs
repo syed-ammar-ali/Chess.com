@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Chess.com</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+      .chessboard {
+        display: grid;
+        grid-template-columns: repeat(
+          8,
+          minmax(0, 1fr)
+        ); /* 8 columns for chessboard squares */
+        grid-template-rows: repeat(
+          8,
+          minmax(0, 1fr)
+        ); /* 8 rows for chessboard squares */
+        width: 400px; /* Chessboard width */
+        height: 400px; /* Chessboard height */
+        transform: rotate(0deg); /* No rotation initially */
+      }
+
+      /* White pieces styling */
+      .piece.white {
+        color: white; /* Sets color of white pieces */
+        filter: drop-shadow(
+          0 0 2px rgba(0, 0, 0, 1)
+        ); /* Adds a shadow effect for visibility */
+      }
+
+      /* Black pieces styling */
+      .piece.black {
+        color: black; /* Sets color of black pieces */
+        filter: drop-shadow(
+          0 0 2px rgb(255, 255, 255, 1)
+        ); /* Adds a shadow effect for visibility */
+      }
+
+      /* Flipped board for black player */
+      .flipped {
+        transform: rotate(
+          180deg
+        ); /* Rotates the board 180 degrees for black player */
+      }
+
+      /* Styling for each square in the chessboard */
+      .square {
+        display: flex; /* Aligns items using Flexbox */
+        align-items: center; /* Vertically centers items inside the square */
+        justify-content: center; /* Horizontally centers items inside the square */
+      }
+
+      /* Light-colored squares */
+      .square.light {
+        background-color: #f0d9b5; /* Light tan color */
+      }
+
+      /* Dark-colored squares */
+      .square.dark {
+        background-color: #b58863; /* Dark brown color */
+      }
+
+      /* Styling for the chess pieces */
+      .piece {
+        font-size: 36px; /* Larger font size for pieces */
+        cursor: pointer; /* Changes cursor to indicate that pieces are clickable */
+      }
+
+      /* Styling for draggable pieces */
+      .piece.draggable {
+        cursor: grab; /* Changes cursor to indicate that pieces can be dragged */
+      }
+
+      /* Styling when a piece is being dragged */
+      .dragging {
+        opacity: 0.5; /* Makes the piece slightly transparent while being dragged */
+      }
+
+      /* Visual indication for a piece in check */
+      .in-check {
+        background-color: red; /* Red background for pieces in check */
+        border: 2px solid yellow; /* Yellow border for pieces in check */
+      }
+
+      /* Rotate pieces for black player when the board is flipped */
+      .flipped .piece {
+        transform: rotate(180deg); /* Rotates pieces for black player */
+      }
+    </style>
+  </head>
+  <body>
+    <div class="w-full h-screen flex items-center justify-center bg-zinc-900">
+      <div class="chessboard w-96 h-96"></div>
+    </div>
+
+    <script
+      src="https://cdn.socket.io/4.8.1/socket.io.min.js"
+      integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+"
+      crossorigin="anonymous"
+    ></script>
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"
+      integrity="sha512-xRllwz2gdZciIB+AkEbeq+gVhX8VB8XsfqeFbUh+SzHlN96dEduwtTuVuc2u9EROlmW9+yhRlxjif66ORpsgVA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+
+    <script src="/Javascripts/chessGame.js"></script>
+  </body>
+</html>
