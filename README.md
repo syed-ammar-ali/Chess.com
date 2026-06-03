@@ -31,7 +31,7 @@ A real-time, two-player chess game built entirely from scratch using **Node.js**
 
 No database. No accounts. No fluff. Just open the link, share it with a friend, and play chess — live, in the browser, with moves syncing instantly over WebSockets.
 
-The first person to connect plays **White**. The second plays **Black**. Anyone else who joins becomes a **spectator** and watches the game live.
+The first person to connect plays **White**. The second plays **Black**.
 
 ---
 
