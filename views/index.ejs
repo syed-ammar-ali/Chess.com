@@ -1,104 +1,392 @@
 <!DOCTYPE html>
-
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chess Master - Realtime Multiplayer Arena</title>
 
-    <title>Chess.com</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
 
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            },
+            colors: {
+              board: {
+                light: '#eeeed2',
+                dark: '#769656',
+                lightMove: '#f7f789',
+                darkMove: '#baca44',
+              },
+            },
+          },
+        },
+      };
+    </script>
 
     <style>
+      :root {
+        /*
+          Total vertical allocation:
+          - Top card: ~42px
+          - Bottom card: ~42px
+          - Spacing/padding: ~24px
+          Total offset = ~110px.
+          Horizontal allocation on desktop:
+          - Sidebar: ~340px to 380px + padding = ~390px
+        */
+        --board-size: min(calc(100dvh - 116px), calc(100vw - 390px), 820px);
+      }
+
+      @media (max-width: 1023px) {
+        :root {
+          --board-size: min(calc(100dvh - 340px), 94vw, 520px);
+        }
+      }
+
+      body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      .chessboard-container {
+        position: relative;
+        width: var(--board-size);
+        height: var(--board-size);
+      }
+
       .chessboard {
         display: grid;
-        grid-template-columns: repeat(
-          8,
-          minmax(0, 1fr)
-        ); /* 8 columns for chessboard squares */
-        grid-template-rows: repeat(
-          8,
-          minmax(0, 1fr)
-        ); /* 8 rows for chessboard squares */
-        width: 400px; /* Chessboard width */
-        height: 400px; /* Chessboard height */
-        transform: rotate(0deg); /* No rotation initially */
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        grid-template-rows: repeat(8, minmax(0, 1fr));
+        width: 100%;
+        height: 100%;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
       }
 
-      /* White pieces styling */
-      .piece.white {
-        color: white; /* Sets color of white pieces */
-        filter: drop-shadow(
-          0 0 2px rgba(0, 0, 0, 1)
-        ); /* Adds a shadow effect for visibility */
-      }
-
-      /* Black pieces styling */
-      .piece.black {
-        color: black; /* Sets color of black pieces */
-        filter: drop-shadow(
-          0 0 2px rgb(255, 255, 255, 1)
-        ); /* Adds a shadow effect for visibility */
-      }
-
-      /* Flipped board for black player */
-      .flipped {
-        transform: rotate(
-          180deg
-        ); /* Rotates the board 180 degrees for black player */
-      }
-
-      /* Styling for each square in the chessboard */
       .square {
-        display: flex; /* Aligns items using Flexbox */
-        align-items: center; /* Vertically centers items inside the square */
-        justify-content: center; /* Horizontally centers items inside the square */
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
       }
 
-      /* Light-colored squares */
       .square.light {
-        background-color: #f0d9b5; /* Light tan color */
+        background-color: #eeeed2;
       }
 
-      /* Dark-colored squares */
       .square.dark {
-        background-color: #b58863; /* Dark brown color */
+        background-color: #769656;
       }
 
-      /* Styling for the chess pieces */
+      .square.light.last-move {
+        background-color: #f7f789 !important;
+      }
+
+      .square.dark.last-move {
+        background-color: #baca44 !important;
+      }
+
+      .square.selected {
+        background-color: rgba(235, 97, 80, 0.7) !important;
+      }
+
+      .square.in-check {
+        background: radial-gradient(ellipse at center, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.4) 65%, transparent 80%) !important;
+      }
+
+      /* Board coordinates */
+      .coord-file {
+        position: absolute;
+        bottom: 2px;
+        right: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        pointer-events: none;
+        line-height: 1;
+      }
+
+      .coord-rank {
+        position: absolute;
+        top: 3px;
+        left: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        pointer-events: none;
+        line-height: 1;
+      }
+
+      .square.light .coord-file,
+      .square.light .coord-rank {
+        color: #769656;
+      }
+
+      .square.dark .coord-file,
+      .square.dark .coord-rank {
+        color: #eeeed2;
+      }
+
+      /* Chess pieces */
       .piece {
-        font-size: 36px; /* Larger font size for pieces */
-        cursor: pointer; /* Changes cursor to indicate that pieces are clickable */
+        position: absolute;
+        width: 12.5%;
+        height: 12.5%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: calc(var(--board-size) / 9.5);
+        cursor: pointer;
+        transition: left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), 
+                    top 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), 
+                    transform 0.15s ease, 
+                    opacity 0.2s ease;
+        z-index: 20;
       }
 
-      /* Styling for draggable pieces */
       .piece.draggable {
-        cursor: grab; /* Changes cursor to indicate that pieces can be dragged */
+        cursor: grab;
       }
 
-      /* Styling when a piece is being dragged */
-      .dragging {
-        opacity: 0.5; /* Makes the piece slightly transparent while being dragged */
+      .piece.draggable:active {
+        cursor: grabbing;
       }
 
-      /* Visual indication for a piece in check */
-      .in-check {
-        background-color: red; /* Red background for pieces in check */
-        border: 2px solid yellow; /* Yellow border for pieces in check */
+      .piece.dragging {
+        opacity: 0.35;
+        transform: scale(1.1);
+        z-index: 30;
       }
 
-      /* Rotate pieces for black player when the board is flipped */
-      .flipped .piece {
-        transform: rotate(180deg); /* Rotates pieces for black player */
+      .piece.white {
+        color: #ffffff;
+        filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 1px rgba(0, 0, 0, 0.9));
+      }
+
+      .piece.black {
+        color: #1c1917;
+        filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
+      }
+
+      /* Move hints */
+      .move-indicator {
+        position: absolute;
+        width: 30%;
+        height: 30%;
+        border-radius: 50%;
+        background-color: rgba(0, 0, 0, 0.22);
+        pointer-events: none;
+        z-index: 15;
+      }
+
+      .capture-indicator {
+        position: absolute;
+        width: 86%;
+        height: 86%;
+        border-radius: 50%;
+        border: 5px solid rgba(0, 0, 0, 0.22);
+        pointer-events: none;
+        z-index: 15;
+      }
+
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #18181b;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #3f3f46;
+        border-radius: 3px;
       }
     </style>
   </head>
-  <body>
-    <div class="w-full h-screen flex items-center justify-center bg-zinc-900">
-      <div class="chessboard w-96 h-96"></div>
-    </div>
+  <body class="bg-zinc-950 text-zinc-100 h-screen w-screen overflow-hidden flex flex-col lg:flex-row antialiased">
+    
+    <!-- Main Chess Arena (Zero-scroll, dynamically scaled board) -->
+    <main class="flex-1 h-full min-w-0 flex flex-col items-center justify-center p-2 sm:p-3 overflow-hidden">
+      
+      <!-- Top Player Card (Opponent in White view, User in Black view) -->
+      <div id="opponent-card" class="w-full max-w-[var(--board-size)] bg-zinc-900/85 border border-zinc-800/80 rounded-xl px-3.5 py-1.5 sm:py-2 flex items-center justify-between shadow-md mb-1.5 transition-all">
+        <div class="flex items-center gap-2.5">
+          <div id="opponent-avatar" class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center font-bold text-base border border-zinc-700 shadow-inner">
+            ♟
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="opponent-name" class="font-bold text-xs sm:text-sm tracking-tight">Opponent</span>
+              <span id="opponent-badge" class="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-zinc-800 text-zinc-400">Waiting</span>
+            </div>
+            <div id="opponent-captured" class="text-xs text-zinc-400 min-h-[16px] tracking-wide flex items-center gap-1 select-none"></div>
+          </div>
+        </div>
+        <div id="opponent-turn-indicator" class="hidden text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse">
+          Thinking...
+        </div>
+      </div>
 
+      <!-- The Chess Board Container -->
+      <div class="chessboard-container">
+        <div class="chessboard"></div>
+
+        <!-- Promotion Modal Overlay -->
+        <div
+          id="promotion-modal"
+          class="hidden absolute inset-0 bg-black/70 backdrop-blur-sm rounded-lg flex items-center justify-center z-50 p-4"
+        >
+          <div class="bg-zinc-900 border border-zinc-700 rounded-xl p-5 shadow-2xl text-center max-w-xs w-full">
+            <h3 class="text-sm font-bold text-zinc-200 uppercase tracking-wider mb-2">Pawn Promotion</h3>
+            <p class="text-xs text-zinc-400 mb-4">Choose your piece:</p>
+            <div class="grid grid-cols-4 gap-2.5" id="promotion-options">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Player Card (User in White view, Opponent in Black view) -->
+      <div id="player-card" class="w-full max-w-[var(--board-size)] bg-zinc-900/85 border border-zinc-800/80 rounded-xl px-3.5 py-1.5 sm:py-2 flex items-center justify-between shadow-md mt-1.5 transition-all">
+        <div class="flex items-center gap-2.5">
+          <div id="player-avatar" class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center font-bold text-base border border-zinc-700 shadow-inner">
+            ♙
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="player-name" class="font-bold text-xs sm:text-sm tracking-tight">You</span>
+              <span id="player-badge" class="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400">White</span>
+            </div>
+            <div id="player-captured" class="text-xs text-zinc-400 min-h-[16px] tracking-wide flex items-center gap-1 select-none"></div>
+          </div>
+        </div>
+        <div id="player-turn-indicator" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          Your Turn
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Side Panel / Sidebar Column (Replaces Top Header and Utilizes Horizontal Space) -->
+    <aside class="w-full lg:w-84 xl:w-96 h-auto lg:h-full bg-zinc-900/70 border-t lg:border-t-0 lg:border-l border-zinc-800/80 flex flex-col p-4 gap-3.5 overflow-hidden backdrop-blur z-10 shrink-0">
+      
+      <!-- App Header & Quick Controls -->
+      <div class="flex items-center justify-between pb-3 border-b border-zinc-800/80">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center font-bold text-lg shadow-lg shadow-emerald-950/50">
+            ♟
+          </div>
+          <div>
+            <h1 class="font-bold text-sm sm:text-base leading-tight tracking-tight flex items-center gap-1.5">
+              Chess.com <span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded-full font-semibold">Live</span>
+            </h1>
+            <p class="text-[11px] text-zinc-400">Multiplayer Chess Arena</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <button
+            id="btn-sound-toggle"
+            class="p-2 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 hover:text-white transition flex items-center gap-1 text-xs font-medium border border-zinc-700/50"
+            title="Toggle Sound Effects"
+          >
+            <span id="sound-icon">🔊</span>
+          </button>
+          <button
+            id="btn-flip"
+            class="p-2 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 hover:text-white transition flex items-center gap-1 text-xs font-medium border border-zinc-700/50"
+            title="Flip Board View"
+          >
+            <span>🔄</span>
+          </button>
+          <button
+            id="btn-reset"
+            class="px-2.5 py-2 rounded-lg bg-rose-600/85 hover:bg-rose-600 text-white transition flex items-center gap-1 text-xs font-semibold shadow-sm"
+            title="Start a new game"
+          >
+            <span>⚡</span>
+            <span class="text-[11px]">New Game</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Match Status Card -->
+      <div class="bg-zinc-900/80 border border-zinc-800/80 rounded-xl p-3 sm:p-3.5 shadow-sm">
+        <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-2">Match Status</div>
+        <div id="status-banner" class="p-2.5 rounded-lg bg-zinc-800/60 border border-zinc-700/40 text-xs sm:text-sm font-medium flex items-center gap-2.5 text-zinc-200">
+          <span id="status-icon" class="text-base sm:text-lg">♟</span>
+          <span id="status-text">White to move</span>
+        </div>
+
+        <div class="mt-2.5 grid grid-cols-2 gap-2 text-xs text-zinc-400">
+          <div class="bg-zinc-800/40 p-2 rounded-lg border border-zinc-800 flex flex-col">
+            <span class="text-zinc-500 text-[10px] uppercase font-bold">White Player</span>
+            <span id="white-status" class="font-medium text-zinc-300 mt-0.5">Connected</span>
+          </div>
+          <div class="bg-zinc-800/40 p-2 rounded-lg border border-zinc-800 flex flex-col">
+            <span class="text-zinc-500 text-[10px] uppercase font-bold">Black Player</span>
+            <span id="black-status" class="font-medium text-zinc-300 mt-0.5">Waiting...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Move History Card (Fills remaining height) -->
+      <div class="bg-zinc-900/80 border border-zinc-800/80 rounded-xl p-3 sm:p-3.5 flex-1 min-h-[140px] flex flex-col shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Move History</span>
+          <span id="move-count" class="text-[11px] font-semibold text-zinc-500">0 moves</span>
+        </div>
+
+        <!-- Move Log Table -->
+        <div id="move-history-container" class="flex-1 overflow-y-auto pr-1 text-xs">
+          <table class="w-full border-collapse">
+            <thead class="sticky top-0 bg-zinc-900/95 backdrop-blur z-10">
+              <tr class="text-zinc-500 border-b border-zinc-800/60 pb-1 text-left text-[11px]">
+                <th class="w-10 font-medium py-1">#</th>
+                <th class="font-medium py-1">White</th>
+                <th class="font-medium py-1">Black</th>
+              </tr>
+            </thead>
+            <tbody id="move-history-body" class="divide-y divide-zinc-800/30">
+              <!-- Move entries added dynamically -->
+            </tbody>
+          </table>
+          <div id="empty-history" class="py-8 text-center text-zinc-600 text-xs">
+            Moves will appear here as you play
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Tips -->
+      <div class="bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-3 text-xs text-zinc-400 flex items-start gap-2.5">
+        <span class="text-base text-emerald-400">💡</span>
+        <div class="text-[11px] leading-relaxed">
+          <strong class="text-zinc-300 font-semibold block mb-0.5">Quick Guide</strong>
+          Click or drag pieces to move. Valid destinations and captures are automatically highlighted!
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Toast Notification Banner Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+    <!-- Scripts -->
     <script
       src="https://cdn.socket.io/4.8.1/socket.io.min.js"
       integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+"
